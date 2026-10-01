@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from './mediaLibrary';
 import { uploadPhotoForAnalysis } from './photoUpload';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -72,9 +73,62 @@ const ResultScreen = ({ Page, pet, photoUri, analysis, savePhotoWithRecord, setS
     <View style={[s.guidanceCard, tone === 'danger' && s.guidanceDanger, tone === 'warn' && s.guidanceWarn]}><Text style={s.guidanceTitle}>권장 다음 행동</Text><Text style={s.guidanceText}>{guidance}</Text></View>
 
     {!isLoading && !shouldRetake && <><Pressable style={s.photoSaveRow} onPress={() => setSavePhotoWithRecord(!savePhotoWithRecord)}><View style={[s.check, savePhotoWithRecord && s.checked]}><Text style={s.checkMark}>{savePhotoWithRecord ? '✓' : ''}</Text></View><View style={s.flex}><Text style={s.photoSaveTitle}>사진도 점검 기록에 저장</Text><Text style={s.photoSaveText}>선택하지 않으면 분석 결과만 저장하고 촬영 사진은 남기지 않아요.</Text></View></Pressable><Notice /><Button onPress={isError ? () => analyzePhoto(photoUri) : saveRecord}>{isError ? '다시 연결하기' : '점검 기록에 저장'}</Button></>}
-    <Button secondary onPress={() => setScreen('camera')}>다시 촬영하기</Button>
+    <Button secondary onPress={() => setScreen('albumCamera')}>다시 촬영하기</Button>
   </ScrollView></Page>;
 };
+
+const DashboardScreen = ({ Page, pets, pet, records, openTab, setPet, setScreen }) => {
+  const selectedPet = pet || pets[0] || null;
+  const latestRecord = records[0] || null;
+  const beginScan = () => {
+    if (!selectedPet) {
+      setScreen('addPet');
+      return;
+    }
+    setPet(selectedPet);
+    setScreen('guide');
+  };
+
+  return <Page><ScrollView contentContainerStyle={s.page}>
+    <Text style={s.dashboardKicker}>반려동물 눈 건강</Text>
+    <Text style={s.dashboardTitle}>오늘의 점검</Text>
+    <Text style={s.dashboardLead}>사진으로 눈 상태를 살펴보고 필요한 경우 병원 방문을 준비하세요.</Text>
+
+    <View style={s.dashboardProfile}>
+      <View style={s.dashboardAvatar}><Text style={s.dashboardAvatarText}>{selectedPet?.name?.slice(0, 1) || '+'}</Text></View>
+      <View style={s.flex}>
+        <Text style={s.dashboardProfileLabel}>{selectedPet ? '현재 점검 대상' : '반려동물 등록'}</Text>
+        <Text style={s.dashboardProfileName}>{selectedPet?.name || '등록된 반려동물이 없어요'}</Text>
+        <Text style={s.dashboardProfileMeta}>{selectedPet?.detail || '이름과 기본 정보를 등록하면 점검을 시작할 수 있어요.'}</Text>
+      </View>
+      <Pressable onPress={() => openTab('반려동물')} style={s.profileAction}><Text style={s.profileActionText}>{selectedPet ? '관리' : '등록'}</Text></Pressable>
+    </View>
+
+    <Pressable style={s.scanHero} onPress={beginScan}>
+      <View style={s.scanHeroTop}><View style={s.scanHeroMark}><Text style={s.scanHeroMarkText}>◉</Text></View><Text style={s.scanHeroLabel}>AI 눈 건강 점검</Text></View>
+      <Text style={s.scanHeroTitle}>{selectedPet ? `${selectedPet.name}의 안구 사진 촬영하기` : '반려동물을 등록하고 점검하기'}</Text>
+      <Text style={s.scanHeroText}>{selectedPet ? '눈이 잘 보이도록 촬영한 뒤 AI 선별 결과를 확인해요.' : '등록 후 촬영 가이드를 따라 눈 건강 점검을 시작해요.'}</Text>
+      <View style={s.scanHeroButton}><Text style={s.scanHeroButtonText}>{selectedPet ? '스캔 카메라 열기' : '반려동물 등록하기'}</Text><Text style={s.scanHeroChevron}>›</Text></View>
+    </Pressable>
+
+    <View style={s.dashboardSectionHeader}><Text style={s.dashboardSectionTitle}>최근 점검</Text><Pressable onPress={() => openTab('기록')}><Text style={s.dashboardLink}>기록 보기</Text></Pressable></View>
+    {latestRecord ? <Pressable style={s.latestCard} onPress={() => openTab('기록')}><View style={[s.latestStatus, latestRecord.tone === 'danger' && s.latestStatusDanger]}><Text style={s.latestStatusText}>{latestRecord.tone === 'danger' ? '!' : '✓'}</Text></View><View style={s.flex}><Text style={s.latestTitle}>{latestRecord.pet} 눈 건강 점검</Text><Text style={s.latestMeta}>{latestRecord.date} · AI 신뢰도 {latestRecord.confidence}</Text><Pill tone={latestRecord.tone}>{latestRecord.result}</Pill></View><Text style={s.chevron}>›</Text></Pressable> : <View style={s.dashboardEmpty}><Text style={s.dashboardEmptyTitle}>아직 점검 기록이 없어요</Text><Text style={s.dashboardEmptyText}>첫 촬영을 마치면 여기에서 결과를 다시 확인할 수 있어요.</Text></View>}
+
+    <View style={s.dashboardSectionHeader}><Text style={s.dashboardSectionTitle}>촬영 전 확인</Text></View>
+    <View style={s.careCard}><View style={s.careRow}><View style={s.careNumber}><Text style={s.careNumberText}>1</Text></View><Text style={s.careText}>밝은 곳에서 눈 주변이 잘 보이게 해주세요.</Text></View><View style={s.careRow}><View style={s.careNumber}><Text style={s.careNumberText}>2</Text></View><Text style={s.careText}>불편해하면 촬영을 멈추고 억지로 고정하지 마세요.</Text></View><View style={s.careRow}><View style={s.careNumber}><Text style={s.careNumberText}>3</Text></View><Text style={s.careText}>통증이나 심한 충혈이 보이면 진료를 우선해 주세요.</Text></View></View>
+    <Notice />
+  </ScrollView></Page>;
+};
+
+const CameraScreen = ({ Page, pet, cameraRef, capturePhoto, pickPhoto, setScreen }) => <Page tabs={false}><View style={s.camera}>
+  <View style={s.cameraTopBar}><Pressable accessibilityLabel="촬영 안내로 돌아가기" onPress={() => setScreen('guide')} style={s.cameraCloseButton}><Text style={s.cameraCloseText}>×</Text></Pressable><View style={s.cameraPetChip}><Text style={s.cameraPetChipText}>{pet?.name || '반려동물'} 촬영</Text></View></View>
+  <Text style={s.cameraTitle}>눈을 원 안에 맞춰 주세요</Text>
+  <Text style={s.cameraSub}>밝은 곳에서 눈 주변이 또렷하게 보이도록 촬영해 주세요.</Text>
+  <View style={s.cameraViewport}><CameraView ref={cameraRef} style={s.cameraPreview} facing="back" autofocus="on" /><View pointerEvents="none" style={s.frame}><View style={s.reticleOuter}><View style={s.reticleInner}><View style={s.reticleDot} /></View></View><View style={s.cameraGuideLabel}><Text style={s.cameraGuideLabelText}>눈 영역을 원 안에 맞춰 주세요</Text></View></View></View>
+  <View style={s.cameraTipPanel}><Text style={s.cameraTipTitle}>촬영 안내</Text><Text style={s.cameraTipText}>눈이 잘 보이지 않거나 반려동물이 움직이면 잠시 쉬었다가 다시 시도해 주세요.</Text></View>
+  <View style={s.cameraActionRow}><Pressable accessibilityLabel="앨범에서 사진 선택" style={s.cameraSideButton} onPress={pickPhoto}><Text style={s.cameraSideIcon}>▣</Text><Text style={s.cameraSideText}>앨범</Text></Pressable><Pressable accessibilityLabel="사진 촬영" style={s.shutter} onPress={capturePhoto}><View style={s.shutterInside}><Text style={s.shutterIcon}>●</Text></View></Pressable><Pressable accessibilityLabel="촬영 팁 보기" style={s.cameraSideButton} onPress={() => Alert.alert('촬영 팁', '직사광선을 피하고 밝고 고른 조명에서 촬영해 주세요. 눈이 흐리거나 흔들린 사진은 다시 촬영해 주세요.')}><Text style={s.cameraSideIcon}>?</Text><Text style={s.cameraSideText}>촬영 팁</Text></Pressable></View>
+  <Text style={s.cameraNote}>촬영한 사진은 AI 선별에 사용되며, 기록 저장을 선택하지 않으면 앱에 보관하지 않습니다.</Text>
+</View></Page>;
 
 export default function App() {
   const [screen, setScreen] = useState('welcome');
@@ -121,7 +175,7 @@ export default function App() {
     }
     const permission = cameraPermission?.granted ? cameraPermission : await requestCameraPermission();
     if (permission?.granted) {
-      setScreen('camera');
+      setScreen('albumCamera');
       return;
     }
     Alert.alert('카메라를 열 수 없어요', Platform.OS === 'web' ? '카카오톡 등 인앱 브라우저에서는 카메라가 제한될 수 있어요. Chrome 또는 Expo Go 앱에서 열고 카메라 권한을 허용해 주세요.' : '반려동물의 눈을 촬영하려면 카메라 사용을 허용해 주세요.');
@@ -201,6 +255,27 @@ export default function App() {
       Alert.alert('촬영에 실패했어요', '카메라를 다시 열고 한 번 더 시도해 주세요.');
     }
   };
+  const pickPhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('사진 접근 권한이 필요해요', '앨범에서 눈 사진을 선택하려면 사진 접근을 허용해 주세요.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const uri = result.assets[0].uri;
+      setPhotoUri(uri);
+      setSavePhotoWithRecord(false);
+      analyzePhoto(uri);
+    } catch {
+      Alert.alert('사진을 불러오지 못했어요', '앨범을 다시 열고 눈이 잘 보이는 사진을 선택해 주세요.');
+    }
+  };
   const saveRecord = async () => {
     const date = new Date().toISOString().slice(0, 10);
     let savedPhotoUri = null;
@@ -246,6 +321,10 @@ export default function App() {
 
   if (screen === 'camera') return <Page tabs={false}><View style={s.camera}><Pressable onPress={() => setScreen('guide')}><Text style={s.close}>×</Text></Pressable><Text style={s.cameraTitle}>{pet.name}의 눈을 가이드에 맞춰 주세요</Text><View style={s.cameraViewport}><CameraView ref={cameraRef} style={s.cameraPreview} facing="back" autofocus="on" /><View pointerEvents="none" style={s.frame}><Text style={s.frameText}>눈 영역을 원 안에 맞춰 주세요</Text></View></View><View style={s.quality}><Pill tone="safe">카메라 준비됨</Pill><Pill tone="warn">조명을 확인해 주세요</Pill></View><Text style={s.cameraSub}>안정된 상태에서 촬영 버튼을 눌러 주세요.</Text><Pressable accessibilityLabel="사진 촬영" style={s.shutter} onPress={capturePhoto}><View style={s.shutterInside} /></Pressable><Text style={s.cameraNote}>불편해하거나 통증이 심해 보이면 촬영보다{`\n`}수의사 진료를 우선해 주세요.</Text></View></Page>;
 
+  if (screen === 'home') return <DashboardScreen Page={Page} pets={pets} pet={pet} records={records} openTab={openTab} setPet={setPet} setScreen={setScreen} />;
+
+  if (screen === 'albumCamera') return <CameraScreen Page={Page} pet={pet} cameraRef={cameraRef} capturePhoto={capturePhoto} pickPhoto={pickPhoto} setScreen={setScreen} />;
+
   if (screen === 'result') return <ResultScreen Page={Page} pet={pet} photoUri={photoUri} analysis={analysis} savePhotoWithRecord={savePhotoWithRecord} setSavePhotoWithRecord={setSavePhotoWithRecord} analyzePhoto={analyzePhoto} saveRecord={saveRecord} setScreen={setScreen} />;
 
   if (screen === 'legacy-result') {
@@ -265,6 +344,62 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
+  cameraTopBar:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  cameraCloseButton:{height:44,width:44,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:'#1D4941'},
+  cameraCloseText:{fontSize:30,lineHeight:34,color:'#F7FBF9'},
+  cameraPetChip:{paddingHorizontal:12,paddingVertical:8,borderRadius:99,backgroundColor:'#1D4941'},
+  cameraPetChipText:{fontSize:12,fontWeight:'800',color:'#D6F2E8'},
+  reticleOuter:{height:184,width:184,borderRadius:92,borderWidth:2,borderColor:'#84D8C1',alignItems:'center',justifyContent:'center'},
+  reticleInner:{height:142,width:142,borderRadius:71,borderWidth:1,borderColor:'rgba(132,216,193,.8)',alignItems:'center',justifyContent:'center'},
+  reticleDot:{height:12,width:12,borderRadius:6,backgroundColor:'#84D8C1'},
+  cameraGuideLabel:{position:'absolute',bottom:22,paddingHorizontal:13,paddingVertical:8,borderRadius:99,backgroundColor:'rgba(16,47,43,.82)'},
+  cameraGuideLabelText:{fontSize:12,fontWeight:'800',color:'#F7FBF9'},
+  cameraTipPanel:{alignSelf:'stretch',padding:14,borderRadius:16,backgroundColor:'#1D4941',marginTop:18},
+  cameraTipTitle:{fontSize:13,fontWeight:'800',color:'#D6F2E8',marginBottom:4},
+  cameraTipText:{fontSize:12,lineHeight:18,color:'#C5DCD5'},
+  cameraActionRow:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:12,marginTop:20},
+  cameraSideButton:{width:62,alignItems:'center',gap:5},
+  cameraSideIcon:{height:42,width:42,borderRadius:14,overflow:'hidden',textAlign:'center',paddingTop:10,fontSize:18,fontWeight:'800',color:'#E5F7F1',backgroundColor:'#1D4941'},
+  cameraSideText:{fontSize:11,fontWeight:'700',color:'#C5DCD5'},
+  shutterIcon:{fontSize:0},
+  dashboardKicker:{fontSize:12,fontWeight:'800',letterSpacing:.7,color:'#0F7563',marginBottom:7},
+  dashboardTitle:{fontSize:31,lineHeight:39,fontWeight:'800',letterSpacing:-.6,color:'#102F2B'},
+  dashboardLead:{fontSize:15,lineHeight:22,color:'#627772',marginTop:8,marginBottom:22},
+  dashboardProfile:{flexDirection:'row',alignItems:'center',gap:12,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:'#DCE7E2',marginBottom:14},
+  dashboardAvatar:{width:48,height:48,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'#DCEEE7'},
+  dashboardAvatarText:{fontSize:20,fontWeight:'800',color:'#0B5D50'},
+  dashboardProfileLabel:{fontSize:11,fontWeight:'800',color:'#71847E',marginBottom:2},
+  dashboardProfileName:{fontSize:17,fontWeight:'800',color:'#183F38'},
+  dashboardProfileMeta:{fontSize:12,color:'#667B74',marginTop:3},
+  profileAction:{minWidth:44,minHeight:36,alignItems:'center',justifyContent:'center',paddingHorizontal:9,borderRadius:11,backgroundColor:'#E7F1ED'},
+  profileActionText:{fontSize:12,fontWeight:'800',color:'#0F7563'},
+  scanHero:{borderRadius:24,padding:20,backgroundColor:'#0F7563',marginBottom:25,shadowColor:'#0F7563',shadowOpacity:.17,shadowRadius:14,shadowOffset:{width:0,height:7},elevation:3},
+  scanHeroTop:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:16},
+  scanHeroMark:{height:29,width:29,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:'#84D8C1'},
+  scanHeroMarkText:{fontSize:17,fontWeight:'900',color:'#0B5D50'},
+  scanHeroLabel:{fontSize:12,fontWeight:'800',color:'#D6F2E8'},
+  scanHeroTitle:{fontSize:21,lineHeight:28,fontWeight:'800',color:'#F8FCFA'},
+  scanHeroText:{fontSize:13,lineHeight:19,color:'#D8F1E8',marginTop:6},
+  scanHeroButton:{marginTop:17,minHeight:48,borderRadius:14,backgroundColor:'#FFFFFF',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:15},
+  scanHeroButtonText:{fontSize:15,fontWeight:'800',color:'#0F7563'},
+  scanHeroChevron:{fontSize:24,color:'#0F7563'},
+  dashboardSectionHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10},
+  dashboardSectionTitle:{fontSize:17,fontWeight:'800',color:'#183F38'},
+  dashboardLink:{fontSize:13,fontWeight:'800',color:'#0F7563'},
+  latestCard:{flexDirection:'row',alignItems:'center',gap:12,backgroundColor:'#FFFFFF',borderRadius:20,padding:16,borderWidth:1,borderColor:'#DCE7E2',marginBottom:25},
+  latestStatus:{width:42,height:42,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:'#DCEEE7'},
+  latestStatusDanger:{backgroundColor:'#FCE8E5'},
+  latestStatusText:{fontSize:19,fontWeight:'900',color:'#0F7563'},
+  latestTitle:{fontSize:15,fontWeight:'800',color:'#183F38',marginBottom:3},
+  latestMeta:{fontSize:12,color:'#667B74',marginBottom:8},
+  dashboardEmpty:{backgroundColor:'#E7F1ED',borderRadius:20,padding:20,borderWidth:1,borderColor:'#D4E6E0',marginBottom:25},
+  dashboardEmptyTitle:{fontSize:15,fontWeight:'800',color:'#275D52'},
+  dashboardEmptyText:{fontSize:13,lineHeight:20,color:'#58706A',marginTop:5},
+  careCard:{backgroundColor:'#FFFFFF',borderRadius:20,padding:16,borderWidth:1,borderColor:'#DCE7E2',gap:15,marginBottom:18},
+  careRow:{flexDirection:'row',alignItems:'center',gap:11},
+  careNumber:{height:25,width:25,borderRadius:13,alignItems:'center',justifyContent:'center',backgroundColor:'#E2F0EB'},
+  careNumberText:{fontSize:12,fontWeight:'900',color:'#0F7563'},
+  careText:{flex:1,fontSize:13,lineHeight:19,color:'#405954'},
   reportKicker:{fontSize:12,fontWeight:'800',letterSpacing:.7,color:'#0F7563',marginBottom:8},
   patientStrip:{flexDirection:'row',alignItems:'center',gap:12,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE7E2',borderRadius:20,padding:15,marginBottom:12},
   petInitial:{width:48,height:48,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'#DCEEE7'},
