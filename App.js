@@ -16,6 +16,66 @@ const Button = ({ children, onPress, secondary }) => <Pressable onPress={onPress
 const Pill = ({ children, tone = 'neutral' }) => <View style={[s.pill, s[`pill_${tone}`]]}><Text style={[s.pillText, s[`pillText_${tone}`]]}>{children}</Text></View>;
 const Notice = () => <View style={s.notice}><Text style={s.noticeIcon}>ⓘ</Text><Text style={s.noticeText}>AI 분석은 병원 방문 필요성을 살펴보는 선별 참고 정보이며, 수의사의 진단을 대체하지 않습니다.</Text></View>;
 
+const ResultScreen = ({ Page, pet, photoUri, analysis, savePhotoWithRecord, setSavePhotoWithRecord, analyzePhoto, saveRecord, setScreen }) => {
+  const isLoading = analysis.status === 'loading';
+  const isError = analysis.status === 'error';
+  const shouldRetake = analysis.status === 'retry';
+  const needsVisit = analysis.needsVisit;
+  const tone = isLoading || shouldRetake ? 'warn' : isError || needsVisit ? 'danger' : 'safe';
+  const statusLabel = isLoading ? '분석 진행 중' : shouldRetake ? '재촬영 필요' : isError ? '서버 연결 필요' : needsVisit ? '진료 상담 권고' : '관찰 지속';
+  const headline = isLoading ? '사진을 분석하고 있어요' : isError ? 'AI 서버에 연결하지 못했어요' : shouldRetake ? '눈이 잘 보이도록 다시 촬영해 주세요' : needsVisit ? `${analysis.disease} 관련 이상 징후 가능성` : '뚜렷한 이상 징후 가능성이 낮아요';
+  const guidance = shouldRetake
+    ? analysis.message
+    : isError
+      ? 'AI 분석 서버에 연결하지 못했어요. 같은 Wi-Fi 연결과 서버 실행 상태를 확인한 뒤 다시 시도해 주세요.'
+      : needsVisit
+        ? '이 결과는 확정 진단이 아닙니다. 눈을 뜨기 어려워하거나 심한 충혈, 분비물, 안구 돌출이 보이면 가까운 동물병원에서 수의사 진료를 받아 주세요.'
+        : '선별 결과가 낮게 나와도 불편해 보이거나 충혈, 분비물이 계속되면 수의사에게 상담해 주세요.';
+
+  return <Page tabs={false}><ScrollView contentContainerStyle={s.page}>
+    <Text style={s.reportKicker}>AI 선별 리포트</Text>
+    <Text style={s.title}>눈 건강 점검 결과</Text>
+    <Text style={s.subtitle}>촬영 사진을 바탕으로 확인한 참고 결과입니다.</Text>
+
+    <View style={s.patientStrip}>
+      <View style={s.petInitial}><Text style={s.petInitialText}>{pet?.name?.slice(0, 1) || '반'}</Text></View>
+      <View style={s.flex}>
+        <Text style={s.patientLabel}>점검 반려동물</Text>
+        <Text style={s.patientName}>{pet?.name || '등록 반려동물'}</Text>
+        <Text style={s.patientMeta}>{pet?.detail || '촬영 기반 눈 건강 점검'}</Text>
+      </View>
+      <View style={s.reportState}><Text style={s.reportStateText}>{isLoading ? '처리 중' : '촬영 완료'}</Text></View>
+    </View>
+
+    <View style={[s.statusBanner, tone === 'danger' && s.statusBannerDanger, tone === 'warn' && s.statusBannerWarn]}>
+      <View style={[s.statusSymbol, tone === 'danger' && s.statusSymbolDanger, tone === 'warn' && s.statusSymbolWarn]}><Text style={s.statusSymbolText}>{tone === 'safe' ? '✓' : '!'}</Text></View>
+      <View style={s.flex}>
+        <Pill tone={tone}>{statusLabel}</Pill>
+        <Text style={s.statusHeadline}>{headline}</Text>
+      </View>
+    </View>
+
+    <View style={s.scanCard}>
+      <View style={s.scanCardHeader}><Text style={s.scanCardTitle}>촬영 안구 이미지</Text><Text style={s.scanCardNote}>원본 사진</Text></View>
+      <View style={s.reportPhoto}>{photoUri ? <Image source={{ uri: photoUri }} style={s.capturedPhoto} /> : <><Text style={s.photoEye}>◉</Text><Text style={s.photoLabel}>촬영 이미지를 불러올 수 없어요</Text></>}</View>
+      <Text style={s.scanCaption}>AI는 이 사진을 서버로 전송해 선별하며, 보호자가 저장을 선택하지 않으면 촬영 사진은 기록에 남기지 않습니다.</Text>
+    </View>
+
+    {!shouldRetake && <View style={s.summaryCard}>
+      <Text style={s.summaryTitle}>분석 요약</Text>
+      <View style={s.summaryGrid}>
+        <View style={s.summaryItem}><Text style={s.summaryLabel}>선별 상태</Text><Text style={s.summaryValue}>{isLoading ? '분석 중' : isError ? '연결 실패' : '선별 완료'}</Text></View>
+        <View style={s.summaryItem}><Text style={s.summaryLabel}>AI 신뢰도</Text><Text style={s.summaryValue}>{isLoading ? '계산 중' : isError ? '확인 불가' : analysis.confidence || '확인 불가'}</Text></View>
+      </View>
+    </View>}
+
+    <View style={[s.guidanceCard, tone === 'danger' && s.guidanceDanger, tone === 'warn' && s.guidanceWarn]}><Text style={s.guidanceTitle}>권장 다음 행동</Text><Text style={s.guidanceText}>{guidance}</Text></View>
+
+    {!isLoading && !shouldRetake && <><Pressable style={s.photoSaveRow} onPress={() => setSavePhotoWithRecord(!savePhotoWithRecord)}><View style={[s.check, savePhotoWithRecord && s.checked]}><Text style={s.checkMark}>{savePhotoWithRecord ? '✓' : ''}</Text></View><View style={s.flex}><Text style={s.photoSaveTitle}>사진도 점검 기록에 저장</Text><Text style={s.photoSaveText}>선택하지 않으면 분석 결과만 저장하고 촬영 사진은 남기지 않아요.</Text></View></Pressable><Notice /><Button onPress={isError ? () => analyzePhoto(photoUri) : saveRecord}>{isError ? '다시 연결하기' : '점검 기록에 저장'}</Button></>}
+    <Button secondary onPress={() => setScreen('camera')}>다시 촬영하기</Button>
+  </ScrollView></Page>;
+};
+
 export default function App() {
   const [screen, setScreen] = useState('welcome');
   const [tab, setTab] = useState('홈');
@@ -186,7 +246,9 @@ export default function App() {
 
   if (screen === 'camera') return <Page tabs={false}><View style={s.camera}><Pressable onPress={() => setScreen('guide')}><Text style={s.close}>×</Text></Pressable><Text style={s.cameraTitle}>{pet.name}의 눈을 가이드에 맞춰 주세요</Text><View style={s.cameraViewport}><CameraView ref={cameraRef} style={s.cameraPreview} facing="back" autofocus="on" /><View pointerEvents="none" style={s.frame}><Text style={s.frameText}>눈 영역을 원 안에 맞춰 주세요</Text></View></View><View style={s.quality}><Pill tone="safe">카메라 준비됨</Pill><Pill tone="warn">조명을 확인해 주세요</Pill></View><Text style={s.cameraSub}>안정된 상태에서 촬영 버튼을 눌러 주세요.</Text><Pressable accessibilityLabel="사진 촬영" style={s.shutter} onPress={capturePhoto}><View style={s.shutterInside} /></Pressable><Text style={s.cameraNote}>불편해하거나 통증이 심해 보이면 촬영보다{`\n`}수의사 진료를 우선해 주세요.</Text></View></Page>;
 
-  if (screen === 'result') {
+  if (screen === 'result') return <ResultScreen Page={Page} pet={pet} photoUri={photoUri} analysis={analysis} savePhotoWithRecord={savePhotoWithRecord} setSavePhotoWithRecord={setSavePhotoWithRecord} analyzePhoto={analyzePhoto} saveRecord={saveRecord} setScreen={setScreen} />;
+
+  if (screen === 'legacy-result') {
     const isLoading = analysis.status === 'loading';
     const isError = analysis.status === 'error';
     const shouldRetake = analysis.status === 'retry';
@@ -203,6 +265,40 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
+  reportKicker:{fontSize:12,fontWeight:'800',letterSpacing:.7,color:'#0F7563',marginBottom:8},
+  patientStrip:{flexDirection:'row',alignItems:'center',gap:12,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE7E2',borderRadius:20,padding:15,marginBottom:12},
+  petInitial:{width:48,height:48,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'#DCEEE7'},
+  petInitialText:{fontSize:20,fontWeight:'800',color:'#0B5D50'},
+  patientLabel:{fontSize:11,fontWeight:'800',color:'#71847E',marginBottom:2},
+  patientName:{fontSize:18,fontWeight:'800',color:'#183F38'},
+  patientMeta:{fontSize:12,color:'#667B74',marginTop:3},
+  reportState:{alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:8,borderRadius:10,backgroundColor:'#E7F1ED'},
+  reportStateText:{fontSize:11,fontWeight:'800',color:'#0F7563'},
+  statusBanner:{flexDirection:'row',gap:13,alignItems:'flex-start',backgroundColor:'#E2F0EB',borderRadius:20,padding:16,marginBottom:16,borderWidth:1,borderColor:'#C9E1D8'},
+  statusBannerDanger:{backgroundColor:'#FCE8E5',borderColor:'#F3D2CD'},
+  statusBannerWarn:{backgroundColor:'#FFF2D9',borderColor:'#F3DDAF'},
+  statusSymbol:{height:38,width:38,borderRadius:19,alignItems:'center',justifyContent:'center',backgroundColor:'#0F7563'},
+  statusSymbolDanger:{backgroundColor:'#A83D32'},
+  statusSymbolWarn:{backgroundColor:'#A66A0A'},
+  statusSymbolText:{fontSize:20,fontWeight:'900',color:'#FFFFFF'},
+  statusHeadline:{fontSize:17,lineHeight:24,fontWeight:'800',color:'#183F38',marginTop:8},
+  scanCard:{backgroundColor:'#FFFFFF',borderRadius:20,padding:14,borderWidth:1,borderColor:'#DCE7E2',marginBottom:16},
+  scanCardHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:2,paddingBottom:12},
+  scanCardTitle:{fontSize:16,fontWeight:'800',color:'#183F38'},
+  scanCardNote:{fontSize:12,fontWeight:'700',color:'#657A73'},
+  reportPhoto:{height:210,borderRadius:14,overflow:'hidden',alignItems:'center',justifyContent:'center',backgroundColor:'#E2F0EB'},
+  scanCaption:{fontSize:12,lineHeight:18,color:'#61736E',marginTop:12,paddingHorizontal:2},
+  summaryCard:{backgroundColor:'#FFFFFF',borderRadius:20,padding:16,borderWidth:1,borderColor:'#DCE7E2',marginBottom:16},
+  summaryTitle:{fontSize:16,fontWeight:'800',color:'#183F38',marginBottom:14},
+  summaryGrid:{flexDirection:'row',gap:10},
+  summaryItem:{flex:1,backgroundColor:'#F1F6F3',borderRadius:14,padding:13},
+  summaryLabel:{fontSize:12,fontWeight:'700',color:'#6A7E78',marginBottom:6},
+  summaryValue:{fontSize:16,fontWeight:'800',color:'#183F38'},
+  guidanceCard:{backgroundColor:'#E7F1ED',borderRadius:20,padding:16,marginBottom:16,borderWidth:1,borderColor:'#D4E6E0'},
+  guidanceDanger:{backgroundColor:'#FCE8E5',borderColor:'#F3D2CD'},
+  guidanceWarn:{backgroundColor:'#FFF2D9',borderColor:'#F3DDAF'},
+  guidanceTitle:{fontSize:16,fontWeight:'800',color:'#183F38',marginBottom:7},
+  guidanceText:{fontSize:13,lineHeight:20,color:'#4A625B'},
   petSelect:{flex:1,flexDirection:'row',alignItems:'center',gap:14},
   recordSelect:{flex:1,flexDirection:'row',alignItems:'center',gap:13},
   deleteButton:{paddingVertical:8,paddingHorizontal:10,borderRadius:10,backgroundColor:'#FFF0EC'},
