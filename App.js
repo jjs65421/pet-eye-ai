@@ -120,14 +120,13 @@ const DashboardScreen = ({ Page, pets, pet, records, openTab, setPet, setScreen 
   </ScrollView></Page>;
 };
 
-const CameraScreen = ({ Page, pet, cameraRef, capturePhoto, pickPhoto, setScreen }) => <Page tabs={false}><View style={s.camera}>
-  <View style={s.cameraTopBar}><Pressable accessibilityLabel="촬영 안내로 돌아가기" onPress={() => setScreen('guide')} style={s.cameraCloseButton}><Text style={s.cameraCloseText}>×</Text></Pressable><View style={s.cameraPetChip}><Text style={s.cameraPetChipText}>{pet?.name || '반려동물'} 촬영</Text></View></View>
-  <Text style={s.cameraTitle}>눈을 원 안에 맞춰 주세요</Text>
-  <Text style={s.cameraSub}>밝은 곳에서 눈 주변이 또렷하게 보이도록 촬영해 주세요.</Text>
-  <View style={s.cameraViewport}><CameraView ref={cameraRef} style={s.cameraPreview} facing="back" autofocus="on" /><View pointerEvents="none" style={s.frame}><View style={s.reticleOuter}><View style={s.reticleInner}><View style={s.reticleDot} /></View></View><View style={s.cameraGuideLabel}><Text style={s.cameraGuideLabelText}>눈 영역을 원 안에 맞춰 주세요</Text></View></View></View>
-  <View style={s.cameraTipPanel}><Text style={s.cameraTipTitle}>촬영 안내</Text><Text style={s.cameraTipText}>눈이 잘 보이지 않거나 반려동물이 움직이면 잠시 쉬었다가 다시 시도해 주세요.</Text></View>
-  <View style={s.cameraActionRow}><Pressable accessibilityLabel="앨범에서 사진 선택" style={s.cameraSideButton} onPress={pickPhoto}><Text style={s.cameraSideIcon}>▣</Text><Text style={s.cameraSideText}>앨범</Text></Pressable><Pressable accessibilityLabel="사진 촬영" style={s.shutter} onPress={capturePhoto}><View style={s.shutterInside}><Text style={s.shutterIcon}>●</Text></View></Pressable><Pressable accessibilityLabel="촬영 팁 보기" style={s.cameraSideButton} onPress={() => Alert.alert('촬영 팁', '직사광선을 피하고 밝고 고른 조명에서 촬영해 주세요. 눈이 흐리거나 흔들린 사진은 다시 촬영해 주세요.')}><Text style={s.cameraSideIcon}>?</Text><Text style={s.cameraSideText}>촬영 팁</Text></Pressable></View>
-  <Text style={s.cameraNote}>촬영한 사진은 AI 선별에 사용되며, 기록 저장을 선택하지 않으면 앱에 보관하지 않습니다.</Text>
+const CameraScreen = ({ Page, pet, cameraRef, capturePhoto, pickPhoto, setScreen }) => <Page tabs={false}><StatusBar style="light" /><View style={s.fullCamera}>
+  <CameraView ref={cameraRef} style={s.fullCameraPreview} facing="back" autofocus="on" />
+  <View style={s.fullCameraOverlay}>
+    <View style={s.fullCameraHeader}><Pressable accessibilityLabel="촬영 안내로 돌아가기" onPress={() => setScreen('guide')} style={s.fullCameraClose}><Text style={s.fullCameraCloseText}>×</Text></Pressable><Text style={s.fullCameraPet}>{pet?.name || '반려동물'}의 눈 촬영</Text><View style={s.fullCameraSpacer} /></View>
+    <View pointerEvents="none" style={s.cleanReticle}><View style={s.cleanReticleCenter} /></View>
+    <View style={s.fullCameraFooter}><Text style={s.fullCameraHint}>눈을 원 안에 맞춰 주세요</Text><View style={s.fullCameraActions}><Pressable accessibilityLabel="앨범에서 사진 선택" style={s.fullCameraSideButton} onPress={pickPhoto}><Text style={s.fullCameraSideIcon}>▣</Text><Text style={s.fullCameraSideText}>앨범</Text></Pressable><Pressable accessibilityLabel="사진 촬영" style={s.cleanShutter} onPress={capturePhoto}><View style={s.cleanShutterInner} /></Pressable><Pressable accessibilityLabel="촬영 팁 보기" style={s.fullCameraSideButton} onPress={() => Alert.alert('촬영 팁', '밝고 고른 조명에서 눈 주변이 잘 보이도록 촬영해 주세요. 흔들리거나 흐린 사진은 다시 촬영해 주세요.')}><Text style={s.fullCameraSideIcon}>?</Text><Text style={s.fullCameraSideText}>촬영 팁</Text></Pressable></View></View>
+  </View>
 </View></Page>;
 
 export default function App() {
@@ -344,6 +343,24 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
+  fullCamera: { flex: 1, backgroundColor: '#102F2B', overflow: 'hidden' },
+  fullCameraPreview: { ...StyleSheet.absoluteFillObject },
+  fullCameraOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 26 },
+  fullCameraHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  fullCameraClose: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,47,43,0.42)' },
+  fullCameraCloseText: { color: '#FFFFFF', fontSize: 30, lineHeight: 32 },
+  fullCameraPet: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 6 },
+  fullCameraSpacer: { width: 44, height: 44 },
+  cleanReticle: { alignSelf: 'center', width: 176, height: 176, borderRadius: 88, borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
+  cleanReticleCenter: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFFFFF' },
+  fullCameraFooter: { alignItems: 'center' },
+  fullCameraHint: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginBottom: 18, textShadowColor: 'rgba(0,0,0,0.65)', textShadowRadius: 5 },
+  fullCameraActions: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  fullCameraSideButton: { width: 64, alignItems: 'center', gap: 6 },
+  fullCameraSideIcon: { width: 44, height: 44, borderRadius: 14, overflow: 'hidden', textAlign: 'center', paddingTop: 11, color: '#FFFFFF', fontSize: 18, fontWeight: '800', backgroundColor: 'rgba(16,47,43,0.50)' },
+  fullCameraSideText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.65)', textShadowRadius: 4 },
+  cleanShutter: { width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.22)' },
+  cleanShutterInner: { width: 62, height: 62, borderRadius: 31, backgroundColor: '#0F7563', borderWidth: 1, borderColor: '#A7E8D4' },
   cameraTopBar:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   cameraCloseButton:{height:44,width:44,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:'#1D4941'},
   cameraCloseText:{fontSize:30,lineHeight:34,color:'#F7FBF9'},
