@@ -124,7 +124,7 @@ const CameraScreen = ({ Page, pet, cameraRef, capturePhoto, pickPhoto, setScreen
   <CameraView ref={cameraRef} style={s.fullCameraPreview} facing="back" autofocus="on" />
   <View style={s.fullCameraOverlay}>
     <View style={s.fullCameraHeader}><Pressable accessibilityLabel="촬영 안내로 돌아가기" onPress={() => setScreen('guide')} style={s.fullCameraClose}><Text style={s.fullCameraCloseText}>×</Text></Pressable><Text style={s.fullCameraPet}>{pet?.name || '반려동물'}의 눈 촬영</Text><View style={s.fullCameraSpacer} /></View>
-    <View pointerEvents="none" style={s.cleanReticle}><View style={s.cleanReticleCenter} /></View>
+    <View />
     <View style={s.fullCameraFooter}><Text style={s.fullCameraHint}>눈을 원 안에 맞춰 주세요</Text><View style={s.fullCameraActions}><Pressable accessibilityLabel="앨범에서 사진 선택" style={s.fullCameraSideButton} onPress={pickPhoto}><Text style={s.fullCameraSideIcon}>▣</Text><Text style={s.fullCameraSideText}>앨범</Text></Pressable><Pressable accessibilityLabel="사진 촬영" style={s.cleanShutter} onPress={capturePhoto}><View style={s.cleanShutterInner} /></Pressable><Pressable accessibilityLabel="촬영 팁 보기" style={s.fullCameraSideButton} onPress={() => Alert.alert('촬영 팁', '밝고 고른 조명에서 눈 주변이 잘 보이도록 촬영해 주세요. 흔들리거나 흐린 사진은 다시 촬영해 주세요.')}><Text style={s.fullCameraSideIcon}>?</Text><Text style={s.fullCameraSideText}>촬영 팁</Text></Pressable></View></View>
   </View>
 </View></Page>;
@@ -344,15 +344,13 @@ export default function App() {
 
 const s = StyleSheet.create({
   fullCamera: { flex: 1, backgroundColor: '#102F2B', overflow: 'hidden' },
-  fullCameraPreview: { ...StyleSheet.absoluteFillObject },
+  fullCameraPreview: { flex: 1, width: '100%', height: '100%' },
   fullCameraOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 26 },
   fullCameraHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   fullCameraClose: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,47,43,0.42)' },
   fullCameraCloseText: { color: '#FFFFFF', fontSize: 30, lineHeight: 32 },
   fullCameraPet: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 6 },
   fullCameraSpacer: { width: 44, height: 44 },
-  cleanReticle: { alignSelf: 'center', width: 176, height: 176, borderRadius: 88, borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
-  cleanReticleCenter: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFFFFF' },
   fullCameraFooter: { alignItems: 'center' },
   fullCameraHint: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginBottom: 18, textShadowColor: 'rgba(0,0,0,0.65)', textShadowRadius: 5 },
   fullCameraActions: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
