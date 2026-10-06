@@ -14,6 +14,7 @@ const DOG_AVATAR = require('./assets/dog-avatar.png');
 const CAT_AVATAR = require('./assets/cat-avatar.png');
 const DOG_PAW = require('./assets/dog-paw.png');
 const CAT_PAW = require('./assets/cat-paw.png');
+const APP_ICON = require('./assets/icon.png');
 // This computer's LAN address. For a physical phone, connect it to the same Wi-Fi.
 const AI_SERVER_URL = 'http://192.168.219.129:8000';
 
@@ -109,7 +110,7 @@ const DashboardScreen = ({ Page, pets, pet, records, openTab, setPet, setScreen 
     </View>
 
     <Pressable style={s.scanHero} onPress={beginScan}>
-      <View style={s.scanHeroTop}><View style={s.scanHeroMark}><Text style={s.scanHeroMarkText}>◉</Text></View><Text style={s.scanHeroLabel}>AI 눈 건강 점검</Text></View>
+      <View style={s.scanHeroTop}><Text style={s.scanHeroLabel}>AI 눈 건강 점검</Text></View>
       <Text style={s.scanHeroTitle}>{selectedPet ? `${selectedPet.name}의 안구 사진 촬영하기` : '반려동물을 등록하고 점검하기'}</Text>
       <Text style={s.scanHeroText}>{selectedPet ? '눈이 잘 보이도록 촬영한 뒤 AI 선별 결과를 확인해요.' : '등록 후 촬영 가이드를 따라 눈 건강 점검을 시작해요.'}</Text>
       <View style={s.scanHeroButton}><Text style={s.scanHeroButtonText}>{selectedPet ? '스캔 카메라 열기' : '반려동물 등록하기'}</Text><Text style={s.scanHeroChevron}>›</Text></View>
@@ -312,7 +313,7 @@ export default function App() {
   // on every keystroke made Korean IME composition lose focus in the web app.
   const Page = useMemo(() => ({ children, tabs = true }) => <SafeAreaView style={s.safe}><StatusBar style="dark" />{children}{tabs && <Tabs />}</SafeAreaView>, [tab, openTab]);
 
-  if (screen === 'welcome') return <Page tabs={false}><View style={s.welcome}><View style={s.logo}><Text style={s.logoText}>◉</Text></View><Pill tone="brand">PET EYE CHECK</Pill><Text style={s.hero}>눈 건강을{`\n`}더 빠르게 살펴보세요</Text><Text style={s.lead}>반려동물의 눈 사진을 촬영하면{`\n`}AI가 이상 징후를 선별해 드려요.</Text><View style={s.bottom}><Notice /><Button onPress={() => setScreen('consent')}>시작하기</Button></View></View></Page>;
+  if (screen === 'welcome') return <Page tabs={false}><View style={s.welcome}><View style={s.logo}><Image source={APP_ICON} style={s.logoImage} /></View><Pill tone="brand">PET EYE CHECK</Pill><Text style={s.hero}>반려동물의 눈 건강을{`\n`}더 빠르게 살펴보세요</Text><Text style={s.lead}>반려동물의 눈 사진을 촬영하면{`\n`}AI가 이상 징후를 선별해 드려요.</Text><View style={s.bottom}><Notice /><Button onPress={() => setScreen('consent')}>시작하기</Button></View></View></Page>;
 
   if (screen === 'consent') return <Page tabs={false}><ScrollView contentContainerStyle={s.page}><Text style={s.eyebrow}>첫 사용 설정</Text><Text style={s.title}>권한과 데이터 이용 동의</Text><Text style={s.subtitle}>안전한 점검을 위해 아래 내용을 확인해 주세요.</Text><View style={s.card}><Text style={s.cardTitle}>카메라 권한</Text><Text style={s.cardText}>눈을 촬영하고 촬영 품질을 확인하는 데 사용합니다.</Text><Text style={s.cardTitle}>점검 이미지와 결과</Text><Text style={s.cardText}>사진은 기본적으로 저장하지 않으며, 보호자가 기록 저장을 직접 선택한 경우에만 사진과 결과를 함께 저장합니다.</Text><Text style={s.cardTitle}>비진단 안내</Text><Text style={s.cardText}>분석 결과는 확정 진단이 아니며, 이상 징후가 있으면 수의사에게 상담해야 합니다.</Text></View><Pressable style={s.checkRow} onPress={() => setAgreed(!agreed)}><View style={[s.check, agreed && s.checked]}><Text style={s.checkMark}>{agreed ? '✓' : ''}</Text></View><Text style={s.checkLabel}>위 권한 및 데이터 이용에 모두 동의합니다</Text></Pressable><View style={s.grow} /><Button onPress={() => agreed ? setScreen('home') : Alert.alert('동의가 필요해요', '서비스 이용을 위해 필수 항목에 동의해 주세요.')}>동의하고 시작하기</Button></ScrollView></Page>;
 
@@ -347,6 +348,8 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
+  scanHeroIcon: { width: 50, height: 50, borderRadius: 17, resizeMode: 'cover' },
+  logoImage: { width: 74, height: 74, borderRadius: 24, resizeMode: 'cover' },
   petAvatar: { width: 48, height: 48, borderRadius: 16, resizeMode: 'cover', backgroundColor: '#F4F1E8' },
   speciesPaw: { width: 25, height: 25, borderRadius: 8, resizeMode: 'cover' },
   fullCamera: { flex: 1, backgroundColor: '#102F2B', overflow: 'hidden' },
