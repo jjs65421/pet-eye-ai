@@ -34,7 +34,8 @@
         {
           "photosPermission": "보호자가 선택한 반려동물 눈 사진을 점검 기록으로 저장합니다."
         }
-      ]
+      ],
+      "expo-status-bar"
     ]
   }
 }

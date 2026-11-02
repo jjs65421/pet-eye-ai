@@ -1,2 +1,3 @@
 @echo off
-py -3.8 "%~dp0build_manifest.py"
+set "PYTHONIOENCODING=utf-8"
+"C:\Users\jungc\miniconda3\envs\pet-eye-gpu\python.exe" "%~dp0build_manifest.py" %*

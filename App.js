@@ -16,7 +16,7 @@ const DOG_PAW = require('./assets/dog-paw.png');
 const CAT_PAW = require('./assets/cat-paw.png');
 const APP_ICON = require('./assets/icon.png');
 // This computer's LAN address. For a physical phone, connect it to the same Wi-Fi.
-const AI_SERVER_URL = 'http://192.168.219.129:8000';
+const AI_SERVER_URL = process.env.EXPO_PUBLIC_AI_SERVER_URL || 'http://192.168.219.130:8000';
 
 const Button = ({ children, onPress, secondary }) => <Pressable onPress={onPress} style={[s.button, secondary && s.secondary]}><Text style={[s.buttonText, secondary && s.secondaryText]}>{children}</Text></Pressable>;
 const Pill = ({ children, tone = 'neutral' }) => <View style={[s.pill, s[`pill_${tone}`]]}><Text style={[s.pillText, s[`pillText_${tone}`]]}>{children}</Text></View>;
@@ -26,14 +26,24 @@ const ResultScreen = ({ Page, pet, photoUri, analysis, savePhotoWithRecord, setS
   const isLoading = analysis.status === 'loading';
   const isError = analysis.status === 'error';
   const shouldRetake = analysis.status === 'retry';
+  const isInconclusive = analysis.status === 'inconclusive';
+  const isReference = analysis.status === 'reference';
+  const isNormal = analysis.status === 'normal_reference';
+  const isJoint = analysis.classificationMethod === 'joint';
   const needsVisit = analysis.needsVisit;
-  const tone = isLoading || shouldRetake ? 'warn' : isError || needsVisit ? 'danger' : 'safe';
-  const statusLabel = isLoading ? '분석 진행 중' : shouldRetake ? '재촬영 필요' : isError ? '서버 연결 필요' : needsVisit ? '진료 상담 권고' : '관찰 지속';
-  const headline = isLoading ? '사진을 분석하고 있어요' : isError ? 'AI 서버에 연결하지 못했어요' : shouldRetake ? '눈이 잘 보이도록 다시 촬영해 주세요' : needsVisit ? `${analysis.disease} 관련 이상 징후 가능성` : '뚜렷한 이상 징후 가능성이 낮아요';
+  const tone = isLoading || shouldRetake || isInconclusive || isReference ? 'warn' : isError || needsVisit ? 'danger' : 'neutral';
+  const statusLabel = isLoading ? '분석 진행 중' : shouldRetake ? '재촬영 필요' : isError ? '서버 연결 필요' : isNormal ? '정상 항목 참고 결과' : isReference ? `${isJoint ? 'AI 분류 결과' : 'AI 참고 점수'} · 수의사 확인 권고` : needsVisit ? '진료 상담 권고' : '판단 어려움';
+  const headline = isLoading ? '사진을 분석하고 있어요' : isError ? 'AI 서버에 연결하지 못했어요' : shouldRetake ? '눈이 잘 보이도록 다시 촬영해 주세요' : isNormal ? '정상 학습 항목에 가까운 사진이에요' : isReference ? `AI 참고 항목: ${analysis.disease}` : needsVisit ? `${analysis.disease} 관련 이상 징후 가능성` : '이 사진으로 질환 여부를 판단하기 어려워요';
   const guidance = shouldRetake
     ? analysis.message
     : isError
       ? 'AI 분석 서버에 연결하지 못했어요. 같은 Wi-Fi 연결과 서버 실행 상태를 확인한 뒤 다시 시도해 주세요.'
+      : isNormal
+        ? `${analysis.message} 증상이 있거나 불편해 보이면 수의사에게 상담해 주세요.`
+      : isReference
+        ? `${analysis.message} ${analysis.rankingNotice || ''}`
+      : isInconclusive
+        ? analysis.message || '질환 여부를 판단할 근거가 충분하지 않아요. 증상이 있으면 수의사에게 상담해 주세요.'
       : needsVisit
         ? '이 결과는 확정 진단이 아닙니다. 눈을 뜨기 어려워하거나 심한 충혈, 분비물, 안구 돌출이 보이면 가까운 동물병원에서 수의사 진료를 받아 주세요.'
         : '선별 결과가 낮게 나와도 불편해 보이거나 충혈, 분비물이 계속되면 수의사에게 상담해 주세요.';
@@ -70,8 +80,8 @@ const ResultScreen = ({ Page, pet, photoUri, analysis, savePhotoWithRecord, setS
     {!shouldRetake && <View style={s.summaryCard}>
       <Text style={s.summaryTitle}>분석 요약</Text>
       <View style={s.summaryGrid}>
-        <View style={s.summaryItem}><Text style={s.summaryLabel}>선별 상태</Text><Text style={s.summaryValue}>{isLoading ? '분석 중' : isError ? '연결 실패' : '선별 완료'}</Text></View>
-        <View style={s.summaryItem}><Text style={s.summaryLabel}>AI 신뢰도</Text><Text style={s.summaryValue}>{isLoading ? '계산 중' : isError ? '확인 불가' : analysis.confidence || '확인 불가'}</Text></View>
+        <View style={s.summaryItem}><Text style={s.summaryLabel}>분석 상태</Text><Text style={s.summaryValue}>{isLoading ? '분석 중' : isError ? '연결 실패' : isNormal ? '정상 항목 참고' : isReference ? isJoint ? '모델 분류 완료' : '참고 점수 표시' : isInconclusive ? '판단 어려움' : '선별 완료'}</Text></View>
+        <View style={s.summaryItem}><Text style={s.summaryLabel}>{isReference ? 'AI 점수' : '확인된 항목'}</Text><Text style={s.summaryValue}>{isLoading ? '확인 중' : isError ? '확인 불가' : isNormal ? '정상 항목 참고' : isReference ? `${analysis.referenceScore}점 / 100` : analysis.disease || '판단 어려움'}</Text></View>
       </View>
     </View>}
 
@@ -117,7 +127,7 @@ const DashboardScreen = ({ Page, pets, pet, records, openTab, setPet, setScreen 
     </Pressable>
 
     <View style={s.dashboardSectionHeader}><Text style={s.dashboardSectionTitle}>최근 점검</Text><Pressable onPress={() => openTab('기록')}><Text style={s.dashboardLink}>기록 보기</Text></Pressable></View>
-    {latestRecord ? <Pressable style={s.latestCard} onPress={() => openTab('기록')}><View style={[s.latestStatus, latestRecord.tone === 'danger' && s.latestStatusDanger]}><Text style={s.latestStatusText}>{latestRecord.tone === 'danger' ? '!' : '✓'}</Text></View><View style={s.flex}><Text style={s.latestTitle}>{latestRecord.pet} 눈 건강 점검</Text><Text style={s.latestMeta}>{latestRecord.date} · AI 신뢰도 {latestRecord.confidence}</Text><Pill tone={latestRecord.tone}>{latestRecord.result}</Pill></View><Text style={s.chevron}>›</Text></Pressable> : <View style={s.dashboardEmpty}><Text style={s.dashboardEmptyTitle}>아직 점검 기록이 없어요</Text><Text style={s.dashboardEmptyText}>첫 촬영을 마치면 여기에서 결과를 다시 확인할 수 있어요.</Text></View>}
+    {latestRecord ? <Pressable style={s.latestCard} onPress={() => openTab('기록')}><View style={[s.latestStatus, latestRecord.tone === 'danger' && s.latestStatusDanger]}><Text style={s.latestStatusText}>{latestRecord.tone === 'danger' ? '!' : '✓'}</Text></View><View style={s.flex}><Text style={s.latestTitle}>{latestRecord.pet} 눈 건강 점검</Text><Text style={s.latestMeta}>{latestRecord.date} · {latestRecord.result}</Text><Pill tone={latestRecord.tone}>{latestRecord.result}</Pill></View><Text style={s.chevron}>›</Text></Pressable> : <View style={s.dashboardEmpty}><Text style={s.dashboardEmptyTitle}>아직 점검 기록이 없어요</Text><Text style={s.dashboardEmptyText}>첫 촬영을 마치면 여기에서 결과를 다시 확인할 수 있어요.</Text></View>}
 
     <View style={s.dashboardSectionHeader}><Text style={s.dashboardSectionTitle}>촬영 전 확인</Text></View>
     <View style={s.careCard}><View style={s.careRow}><View style={s.careNumber}><Text style={s.careNumberText}>1</Text></View><Text style={s.careText}>밝은 곳에서 눈 주변이 잘 보이게 해주세요.</Text></View><View style={s.careRow}><View style={s.careNumber}><Text style={s.careNumberText}>2</Text></View><Text style={s.careText}>불편해하면 촬영을 멈추고 억지로 고정하지 마세요.</Text></View><View style={s.careRow}><View style={s.careNumber}><Text style={s.careNumberText}>3</Text></View><Text style={s.careText}>통증이나 심한 충혈이 보이면 진료를 우선해 주세요.</Text></View></View>
@@ -233,13 +243,21 @@ export default function App() {
         setAnalysis({ status: 'retry', message: data.capture_check.message });
         return;
       }
-      const probability = data.top_finding.abnormal_probability;
+      const flagged = Array.isArray(data.flagged_diseases) ? data.flagged_diseases : [];
+      const isReference = ['score_summary', 'differential_screening', 'hybrid_screening', 'reference_scores'].includes(data.result) && data.top_finding;
       setAnalysis({
-        status: 'complete',
-        disease: data.top_finding.disease,
-        probability,
-        confidence: `${Math.round(probability * 100)}%`,
-        needsVisit: probability >= 0.5,
+        status: data.result === 'normal_reference' ? 'normal_reference' : isReference ? 'reference' : data.result === 'screening_only' && flagged.length ? 'complete' : 'inconclusive',
+        disease: isReference ? data.top_finding.disease : flagged.join(', '),
+        referenceScore: isReference ? (data.top_finding.score * 100).toFixed(1) : null,
+        rankingNotice: data.ranking_notice || '',
+        classificationMethod: data.classification_model_version ? 'joint' : 'binary',
+        classificationModelVersion: data.classification_model_version || null,
+        findings: data.findings || [],
+        epiphora: data.epiphora_finding || null,
+        modelVersion: data.model_version || null,
+        message: data.message || '질환 여부를 판단할 근거가 충분하지 않아요.',
+        confidence: '확률 제공 안 함',
+        needsVisit: data.needs_visit === true && (Boolean(isReference) || flagged.length > 0),
       });
     } catch (error) {
       setAnalysis({
@@ -297,9 +315,9 @@ export default function App() {
       petId: pet.id,
       pet: pet.name,
       date,
-      result: analysis.needsVisit ? '이상 가능성 · 진료 권고' : '이상 가능성 낮음',
+      result: analysis.status === 'normal_reference' ? '정상 항목 참고 · 증상 시 상담' : analysis.status === 'reference' ? `${analysis.disease} · 참고 점수 · 수의사 확인 권고` : analysis.needsVisit ? '이상 가능성 · 진료 권고' : '판단 어려움',
       confidence: analysis.confidence || '분석 불가',
-      tone: analysis.needsVisit ? 'danger' : 'safe',
+      tone: analysis.status === 'reference' ? 'warn' : analysis.needsVisit ? 'danger' : 'warn',
       analysis,
       photoSaved: Boolean(savedPhotoUri),
       photoUri: savedPhotoUri,
@@ -331,16 +349,7 @@ export default function App() {
 
   if (screen === 'result') return <ResultScreen Page={Page} pet={pet} photoUri={photoUri} analysis={analysis} savePhotoWithRecord={savePhotoWithRecord} setSavePhotoWithRecord={setSavePhotoWithRecord} analyzePhoto={analyzePhoto} saveRecord={saveRecord} setScreen={setScreen} />;
 
-  if (screen === 'legacy-result') {
-    const isLoading = analysis.status === 'loading';
-    const isError = analysis.status === 'error';
-    const shouldRetake = analysis.status === 'retry';
-    const needsVisit = analysis.needsVisit;
-    const title = isLoading ? '사진을 분석하고 있어요' : isError ? 'AI 서버에 연결하지 못했어요' : shouldRetake ? `반려동물의 눈이 잘 보이도록${`\n`}다시 촬영해 주세요` : needsVisit ? `${analysis.disease} 관련 이상 징후${`\n`}가능성이 확인됐어요` : '뚜렷한 이상 징후 가능성이 낮아요';
-    return <Page tabs={false}><ScrollView contentContainerStyle={s.page}><Text style={s.eyebrow}>{pet.name} · 촬영 완료</Text><Text style={s.title}>AI 선별 결과</Text><View style={s.photo}>{photoUri ? <Image source={{ uri: photoUri }} style={s.capturedPhoto} /> : <><Text style={s.photoEye}>◉</Text><Text style={s.photoLabel}>촬영 이미지</Text></>}</View><Pill tone={isLoading || shouldRetake ? "warn" : needsVisit ? "danger" : "safe"}>{isLoading ? 'AI 모델 분석 중' : shouldRetake ? '재촬영이 필요해요' : isError ? '서버 연결 필요' : needsVisit ? '⚠ 이상 징후 가능성 · 진료 권고' : '이상 징후 가능성 낮음'}</Pill><Text style={s.resultTitle}>{title}</Text>{!shouldRetake && <View style={s.metrics}><View><Text style={s.metricLabel}>AI 선별 신뢰도</Text><Text style={s.metric}>{isLoading ? '…' : isError ? '-' : analysis.confidence}</Text></View><View><Text style={s.metricLabel}>분석 상태</Text><Text style={s.metric}>{isLoading ? '분석 중' : isError ? '연결 실패' : '선별 완료'}</Text></View></View>}<View style={s.alert}><Text style={s.alertTitle}>{shouldRetake ? '📷 눈이 보이도록 다시 촬영해 주세요' : isError ? '📶 서버 연결을 확인해 주세요' : needsVisit ? '🏥 동물병원 방문을 권고해요' : '👀 증상을 계속 관찰해 주세요'}</Text><Text style={s.alertText}>{shouldRetake ? analysis.message : isError ? `AI 서버(${AI_SERVER_URL})에 연결하지 못했어요. 오류: ${analysis.message || '알 수 없음'}` : needsVisit ? '이 결과는 질환의 확정 진단이 아닌 AI 선별 결과입니다. 눈을 뜨기 어려움, 심한 충혈, 안구 돌출 또는 불편한 모습이 보이면 가까운 동물병원에서 수의사 진료를 받아 주세요.' : 'AI 선별상 이상 가능성이 낮더라도 눈을 뜨기 어려움, 충혈, 분비물 등의 증상이 있거나 걱정된다면 수의사 진료를 받아 주세요.'}</Text></View>{!isLoading && !shouldRetake && <><Pressable style={s.photoSaveRow} onPress={() => setSavePhotoWithRecord(!savePhotoWithRecord)}><View style={[s.check, savePhotoWithRecord && s.checked]}><Text style={s.checkMark}>{savePhotoWithRecord ? '✓' : ''}</Text></View><View style={s.flex}><Text style={s.photoSaveTitle}>사진도 점검 기록에 저장</Text><Text style={s.photoSaveText}>선택하지 않으면 분석 결과만 저장하고 촬영 사진은 남기지 않아요.</Text></View></Pressable><Notice /><Button onPress={isError ? () => analyzePhoto(photoUri) : saveRecord}>{isError ? '다시 연결하기' : '점검 기록에 저장'}</Button></>}<Button secondary onPress={() => setScreen('camera')}>{shouldRetake ? '다시 촬영하기' : '다시 촬영하기'}</Button></ScrollView></Page>;
-  }
-
-  if (screen === 'history') return <Page><ScrollView contentContainerStyle={s.page}><Text style={s.title}>점검 기록</Text><Text style={s.subtitle}>아이의 눈 건강 변화를 기록으로 살펴보세요.</Text>{records.length === 0 ? <View style={s.empty}><Text style={s.emptyTitle}>아직 점검 기록이 없어요</Text><Text style={s.emptyText}>반려동물을 등록하고 첫 눈 건강 점검을 시작해 보세요.</Text></View> : records.map((item) => <View key={item.id} style={s.record}><Pressable style={s.recordSelect} onPress={() => { setPet(pets.find((savedPet) => savedPet.id === item.petId) || { name: item.pet }); setPhotoUri(item.photoUri || null); setAnalysis(item.analysis || { status: 'complete', needsVisit: true, confidence: item.confidence }); setScreen('result'); }}><View style={s.recordIcon}><Text>{item.photoSaved ? '▣' : '◉'}</Text></View><View style={s.flex}><Text style={s.recordTitle}>{item.pet} 눈 촬영</Text><Text style={s.meta}>{item.date} · 신뢰도 {item.confidence}</Text><Pill tone={item.tone}>{item.result}</Pill></View><Text style={s.chevron}>›</Text></Pressable><Pressable accessibilityLabel={`${item.pet} 점검 기록 삭제`} onPress={() => deleteRecord(item)} style={s.deleteButton}><Text style={s.deleteText}>삭제</Text></Pressable></View>)}<Notice /></ScrollView></Page>;
+  if (screen === 'history') return <Page><ScrollView contentContainerStyle={s.page}><Text style={s.title}>점검 기록</Text><Text style={s.subtitle}>아이의 눈 건강 변화를 기록으로 살펴보세요.</Text>{records.length === 0 ? <View style={s.empty}><Text style={s.emptyTitle}>아직 점검 기록이 없어요</Text><Text style={s.emptyText}>반려동물을 등록하고 첫 눈 건강 점검을 시작해 보세요.</Text></View> : records.map((item) => <View key={item.id} style={s.record}><Pressable style={s.recordSelect} onPress={() => { setPet(pets.find((savedPet) => savedPet.id === item.petId) || { name: item.pet }); setPhotoUri(item.photoUri || null); setAnalysis(item.analysis?.modelVersion ? item.analysis : { status: 'inconclusive', needsVisit: false, message: '이 기록은 이전 모델의 결과여서 현재 판단 기준으로 확인할 수 없어요. 새 사진으로 다시 점검해 주세요.' }); setScreen('result'); }}><View style={s.recordIcon}><Text>{item.photoSaved ? '▣' : '◉'}</Text></View><View style={s.flex}><Text style={s.recordTitle}>{item.pet} 눈 촬영</Text><Text style={s.meta}>{item.date} · {item.result}</Text><Pill tone={item.tone}>{item.result}</Pill></View><Text style={s.chevron}>›</Text></Pressable><Pressable accessibilityLabel={`${item.pet} 점검 기록 삭제`} onPress={() => deleteRecord(item)} style={s.deleteButton}><Text style={s.deleteText}>삭제</Text></Pressable></View>)}<Notice /></ScrollView></Page>;
 
   if (screen === 'settings') return <Page><ScrollView contentContainerStyle={s.page}><Text style={s.title}>설정</Text><Text style={s.section}>개인정보 및 동의</Text>{['카메라 · 데이터 이용 동의 관리', '저장 이미지 조회', '점검 기록 삭제', '데이터 삭제 요청', '이용약관 · 개인정보처리방침'].map((item) => <Pressable key={item} style={s.setting} onPress={() => item === '데이터 삭제 요청' && Alert.alert('데이터 삭제 요청', '삭제 요청은 고객 지원을 통해 처리됩니다.')}><Text style={s.settingText}>{item}</Text><Text style={s.chevron}>›</Text></Pressable>)}<View style={s.settingNotice}><Text style={s.settingNoticeTitle}>안전한 사용 안내</Text><Text style={s.settingNoticeText}>이 앱은 안구 사진을 바탕으로 이상 가능성을 선별할 뿐, 질환을 진단하지 않습니다. 반려동물의 상태가 걱정되면 수의사와 상담하세요.</Text></View></ScrollView></Page>;
 

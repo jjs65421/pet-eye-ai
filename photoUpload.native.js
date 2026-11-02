@@ -5,6 +5,7 @@ import { fetch } from 'expo/fetch';
 // than the deprecated { uri, type, name } React Native upload object.
 export const uploadPhotoForAnalysis = (url, uri) => {
   const form = new FormData();
+  form.append('photo_source', '스마트폰');
   form.append('image', new File(uri));
   return fetch(url, { method: 'POST', body: form });
 };
